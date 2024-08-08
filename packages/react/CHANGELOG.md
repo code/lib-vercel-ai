@@ -1,5 +1,35 @@
 # @ai-sdk/react
 
+## 0.0.40
+
+### Patch Changes
+
+- @ai-sdk/provider-utils@1.0.9
+- @ai-sdk/ui-utils@0.0.28
+
+## 0.0.39
+
+### Patch Changes
+
+- @ai-sdk/provider-utils@1.0.8
+- @ai-sdk/ui-utils@0.0.27
+
+## 0.0.38
+
+### Patch Changes
+
+- @ai-sdk/provider-utils@1.0.7
+- @ai-sdk/ui-utils@0.0.26
+
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies [9614584]
+- Updated dependencies [0762a22]
+  - @ai-sdk/provider-utils@1.0.6
+  - @ai-sdk/ui-utils@0.0.25
+
 ## 0.0.36
 
 ### Patch Changes
