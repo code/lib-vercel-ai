@@ -36,11 +36,10 @@ The `streamUI` function executes as part of a server action as illustrated below
 #### Before: Handle generation and rendering in a single server action
 
 ```tsx filename="@/app/actions.tsx"
-import { streamUI } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { getMutableAIState } from 'ai/rsc';
+import { getMutableAIState, streamUI } from 'ai/rsc';
 
-export function sendMessage(message: string) {
+export async function sendMessage(message: string) {
   'use server';
 
   const messages = getMutableAIState('messages');
@@ -158,6 +157,18 @@ export default function Page() {
 }
 ```
 
+### Parallel Tool Calls
+
+In AI SDK RSC, `streamUI` does not support parallel tool calls. You will have to use a combination of `streamText`, `createStreamableUI` and `createStreamableValue`.
+
+With AI SDK UI, `useChat` comes with built-in support for parallel tool calls. You can define multiple tools in the `streamText` and have them called them in parallel. The `useChat` hook will then handle the parallel tool calls for you automatically.
+
+### Multi-Step Tool Calls
+
+In AI SDK RSC, `streamUI` does not support multi-step tool calls. You will have to use a combination of `streamText`, `createStreamableUI` and `createStreamableValue`.
+
+With AI SDK UI, `useChat` comes with built-in support for multi-step tool calls. You can set `maxSteps` in the `streamText` function to define the number of steps the language model can make in a single call. The `useChat` hook will then handle the multi-step tool calls for you automatically.
+
 ### Generative User Interfaces
 
 The `streamUI` function uses `tools` as a way to execute functions based on user input and renders React components based on the function output to go beyond text in the chat interface.
@@ -166,7 +177,7 @@ The `streamUI` function uses `tools` as a way to execute functions based on user
 
 ```tsx filename="@/app/actions.tsx"
 import { z } from 'zod';
-import { streamUI } from 'ai';
+import { streamUI } from 'ai/rsc';
 import { openai } from '@ai-sdk/openai';
 import { getWeather } from '@/utils/queries';
 import { Weather } from '@/components/weather';
@@ -209,7 +220,7 @@ import { openai } from '@ai-sdk/openai';
 import { getWeather } from '@/utils/queries';
 import { streamText, convertToCoreMessages } from 'ai';
 
-export function POST(request) {
+export async function POST(request) {
   const { messages } = await request.json();
 
   const coreMessages = convertToCoreMessages(messages);
@@ -370,6 +381,79 @@ export function ListFlights({ chatId, flights }) {
 }
 ```
 
+### Loading Indicators
+
+In AI SDK RSC, you can use the `initial` parameter of `streamUI` to define the component to display while the generation is in progress.
+
+#### Before: Use `loading` to show loading indicator
+
+```tsx filename="@/app/actions.tsx"
+import { openai } from '@ai-sdk/openai';
+import { streamUI } from 'ai/rsc';
+
+const { value: stream } = await streamUI({
+  model: openai('gpt-4o'),
+  system: 'you are a friendly assistant!',
+  messages,
+  initial: <div>Loading...</div>,
+  text: async function* ({ content, done }) {
+    // process text
+  },
+  tools: {
+    // tool definitions
+  },
+});
+
+return stream;
+```
+
+With AI SDK UI, you can use the tool invocation state to show a loading indicator while the tool is executing.
+
+#### After: Use tool invocation state to show loading indicator
+
+```tsx filename="@/app/components/message.tsx"
+'use client';
+
+export function Message({ role, content, toolInvocations }) {
+  return (
+    <div>
+      <div>{role}</div>
+      <div>{content}</div>
+
+      {toolInvocations && (
+        <div>
+          {toolInvocations.map(toolInvocation => {
+            const { toolName, toolCallId, state } = toolInvocation;
+
+            if (state === 'result') {
+              const { result } = toolInvocation;
+
+              return (
+                <div key={toolCallId}>
+                  {toolName === 'getWeather' ? (
+                    <Weather weatherAtLocation={result} />
+                  ) : null}
+                </div>
+              );
+            } else {
+              return (
+                <div key={toolCallId}>
+                  {toolName === 'getWeather' ? (
+                    <Weather isLoading={true} />
+                  ) : (
+                    <div>Loading...</div>
+                  )}
+                </div>
+              );
+            }
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
 ### Saving Chats
 
 Before implementing `streamUI` as a server action, you should create an `<AI/>` provider and wrap your application at the root layout to sync the AI and UI states. During initialization, you typically use the `onSetAIState` callback function to track updates to the AI state and save it to the database when `done(...)` is called.
@@ -405,7 +489,7 @@ import { openai } from '@ai-sdk/openai';
 import { saveChat } from '@/utils/queries';
 import { streamText, convertToCoreMessages } from 'ai';
 
-export function POST(request) {
+export async function POST(request) {
   const { id, messages } = await request.json();
 
   const coreMessages = convertToCoreMessages(messages);
